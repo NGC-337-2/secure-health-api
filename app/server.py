@@ -14,6 +14,25 @@ REQ_LATENCY = Histogram('api_request_latency_seconds', 'Latency', ['endpoint'])
 def metrics():
     return generate_latest(), 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
+@app.before_request
+def before_request():
+    # Increment with label values
+    REQUEST_COUNT.labels(
+        endpoint=request.path,
+        method=request.method,
+        status="pending"   # or set later after response
+    ).inc()
+
+@app.after_request
+def after_request(response):
+    # Update with actual status code
+    REQUEST_COUNT.labels(
+        endpoint=request.path,
+        method=request.method,
+        status=str(response.status_code)
+    ).inc()
+    return response
+
 print("before calling GET require_role")
 @app.route('/records/<pid>', methods=['GET'])
 @verify_jwt
